@@ -3,22 +3,48 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from ase.io import read
+from janus_core.helpers.janus_types import PathLike
 import matplotlib.pyplot as plt
+from mlip_tesitng.analysis import compare, convert
 import numpy as np
 from yaml import safe_load
 
-from janus_core.analysis import compare, convert
 
+def get_config(config_file: PathLike) -> dict[str, Any]:
+    """
+    Load configuration file.
 
-def get_config():
+    Parameters
+    ----------
+    config_file
+        File containing configuration to be loaded.
+
+    Returns
+    -------
+    dict[str, Any]
+        Loaded configuration.
+    """
     with open("analysis_config.yml", encoding="utf8") as file:
-        config = safe_load(file)
-    return config
+        return safe_load(file)
 
 
-def get_files(config):
+def get_files(config: dict[str, Any]) -> tuple[list, dict[str, PathLike]]:
+    """
+    Get reference and MLIP files.
+
+    Parameters
+    ----------
+    config
+        Loaded configuration file.
+
+    Returns
+    -------
+    tuple[list, list]
+        Reference and MLIP files.
+    """
     # Get reference files
     ref_files = list(Path().glob(config["reference_files"]["pattern"]))
 
@@ -45,7 +71,26 @@ def get_files(config):
     return ref_files, mlip_files
 
 
-def get_energies(ref_files, mlip_files, config):
+def get_energies(
+    ref_files: list, mlip_files: dict[str, PathLike], config: dict[str, Any]
+) -> tuple[list, dict[str, Any]]:
+    """
+    Get energies for reference and MLIPs.
+
+    Parameters
+    ----------
+    ref_files
+        List of reference data files.
+    mlip_files
+        Dictionary of MLIP data files.
+    config
+        Loaded configuration file.
+
+    Returns
+    -------
+    tuple[list, dict[str, Any]]
+        Reference energies and dictionary of MLIP energies.
+    """
     ref_energies = []
     mlip_energies = {}
 
@@ -69,11 +114,38 @@ def get_energies(ref_files, mlip_files, config):
     return ref_energies, mlip_energies
 
 
-def flatten(lst):
+def flatten(lst: list) -> list:
+    """
+    Flatten nested list.
+
+    Parameters
+    ----------
+    lst
+        List to be flattened.
+
+    Returns
+    -------
+    list
+        Flattened list.
+    """
     return [x for xs in lst for x in xs]
 
 
-def plot_energies(ref_energies, mlip_energies, lim=None):
+def plot_energies(
+    ref_energies: list, mlip_energies: dict[str, Any], lim=tuple[float, float] | None
+) -> None:
+    """
+    Plot scatter plot of energies.
+
+    Parameters
+    ----------
+    ref_energies
+        Reference energies to plot.
+    mlip_energies
+        MLIP energies to plot.
+    lim
+        Limits for axes.
+    """
     for mlip in mlip_energies:
         plt.scatter(
             np.array(flatten(ref_energies)),

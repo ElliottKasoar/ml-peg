@@ -2,15 +2,50 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from ase.io import read
+from janus_core.helpers.janus_types import PathLike
 import numpy as np
 
 
-def flatten(lst):
+def flatten(lst: list) -> list:
+    """
+    Flatten nested list.
+
+    Parameters
+    ----------
+    lst
+        List to be flattened.
+
+    Returns
+    -------
+    list
+        Flattened list.
+    """
     return [x for xs in lst for x in xs]
 
 
-def get_energies(ref_files, mlip_files, config):
+def get_energies(
+    ref_files: list, mlip_files: dict[str, PathLike], config: dict[str, Any]
+) -> tuple[list[float], dict[str, float]]:
+    """
+    Get reference and MLIP energies.
+
+    Parameters
+    ----------
+    ref_files
+        List of reference files.
+    mlip_files
+        Dictionary of MLIP files, labelled by their keys.
+    config
+        Loaded configuration.
+
+    Returns
+    -------
+    tuple[list[float], dict[str, float]]
+        Reference and MLIP energies.
+    """
     ref_energies = []
     mlip_energies = {}
 
@@ -34,7 +69,26 @@ def get_energies(ref_files, mlip_files, config):
     return ref_energies, mlip_energies
 
 
-def compare_energies(ref_files, mlip_files, config):
+def compare_energies(
+    ref_files: list, mlip_files: list, config: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Compare reference and MLIP energies.
+
+    Parameters
+    ----------
+    ref_files
+        Reference files.
+    mlip_files
+        MLIP files.
+    config
+        Loaded configuration.
+
+    Returns
+    -------
+    dict[str, Any]
+        Mean difference in energies for each MLIP.
+    """
     ref_energies, mlip_energies = get_energies(ref_files, mlip_files, config)
 
     flat_ref_energies = flatten(ref_energies)
