@@ -8,9 +8,10 @@ from typing import Any
 from ase.io import read
 from janus_core.helpers.janus_types import PathLike
 import matplotlib.pyplot as plt
-from mlip_tesitng.analysis import compare, convert
 import numpy as np
 from yaml import safe_load
+
+from mlip_testing.analysis import compare, convert
 
 
 def get_config(config_file: PathLike) -> dict[str, Any]:
