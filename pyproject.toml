@@ -24,6 +24,46 @@ dependencies = [
     "plotly>=6.0.1",
     "dash>=3.0.2",
     "dash_bootstrap_components",
+    "plotly>=6.0.1",
+]
+
+[project.optional-dependencies]
+chgnet = [
+    "janus-core[chgnet]",
+]
+dpa3 = [
+    "janus-core[dpa3]",
+]
+mace = [
+    "janus-core[mace]",
+]
+nequip = [
+    "janus-core[nequip]",
+]
+orb = [
+    "janus-core[orb]",
+]
+sevennet = [
+    "janus-core[sevennet]",
+]
+visualise = [
+    "janus-core[visualise]",
+]
+all = [
+    "janus-core[all]",
+]
+
+# MLIP with updated e3nn
+mattersim = [
+    "janus-core[mattersim]",
+]
+
+# MLIPs with dgl dependency
+alignn = [
+    "janus-core[alignn]",
+]
+m3gnet = [
+    "janus-core[m3gnet]",
 ]
 
 [project.urls]
