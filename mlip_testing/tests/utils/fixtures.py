@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 import functools
 from typing import Any, Literal
 
@@ -120,8 +120,102 @@ def plot_scatter(plot_type: Literal["matplotlib", "plotly"] = "matplotlib") -> C
                     fig.update_traces()
                     fig.write_json("scatter.json")
 
+                case _:
+                    raise NotImplementedError("Plot type not available.")
+
             return results
 
         return plot_scatter_wrapper
 
     return plot_scatter_decorator
+
+
+def plot_bar(
+    plot_type: Literal["plotly"] = "plotly", labels: Sequence | None = None
+) -> Callable:
+    """
+    Plot bar chart of MLIP results against reference data.
+
+    Parameters
+    ----------
+    plot_type
+        Type of plot to create and save.
+    labels
+        Labels for bars.
+
+    Returns
+    -------
+    Callable
+        Decorator to wrap function.
+    """
+    print(labels)
+
+    def plot_bar_decorator(func: Callable) -> Callable:
+        """
+        Decorate function to plot bar chart.
+
+        Parameters
+        ----------
+        func
+            Function being wrapped.
+
+        Returns
+        -------
+        Callable
+            Wrapped function.
+        """
+
+        @functools.wraps(func)
+        def plot_bar_wrapper(*args, **kwargs) -> dict[str, Any]:
+            """
+            Wrap function to plot bar chart.
+
+            Parameters
+            ----------
+            *args
+                Arguments to pass to the function being wrapped.
+            **kwargs
+                Key word arguments to pass to the function being wrapped.
+
+            Returns
+            -------
+            dict
+                Results dictionary.
+            """
+            results = func(*args, **kwargs)
+            ref = results["ref"]
+
+            match plot_type:
+                case "plotly":
+                    fig = go.Figure()
+
+                    fig.add_trace(
+                        go.Bar(
+                            x=labels,
+                            y=ref,
+                            name="Reference",
+                        )
+                    )
+
+                    for mlip, value in results.items():
+                        if mlip == "ref":
+                            continue
+                        fig.add_trace(
+                            go.Bar(
+                                x=labels,
+                                y=value,
+                                name=mlip,
+                            )
+                        )
+
+                    fig.update_traces()
+                    fig.write_json("bar.json")
+
+                case _:
+                    raise NotImplementedError("Plot type not available.")
+
+            return results
+
+        return plot_bar_wrapper
+
+    return plot_bar_decorator
