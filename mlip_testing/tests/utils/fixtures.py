@@ -4,21 +4,20 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 import functools
-from typing import Any, Literal
+from typing import Any
 
-import matplotlib.pyplot as plt
 import numpy as np
 import plotly.graph_objects as go
 
 
-def plot_scatter(plot_type: Literal["matplotlib", "plotly"] = "matplotlib") -> Callable:
+def plot_scatter(plot_combined: bool = True) -> Callable:
     """
     Plot scatter plot of MLIP results against reference data.
 
     Parameters
     ----------
-    plot_type
-        Type of plot to create and save.
+    plot_combined
+        Whether to plot all MLIPs on same graph.
 
     Returns
     -------
@@ -59,45 +58,26 @@ def plot_scatter(plot_type: Literal["matplotlib", "plotly"] = "matplotlib") -> C
                 Results dictionary.
             """
             results = func(*args, **kwargs)
+            ref = results["ref"]
 
-            match plot_type:
-                case "matplotlib":
-                    fig, ax = plt.subplots()
-                    ref = results["ref"]
-                    for mlip, value in results.items():
-                        if mlip == "ref":
-                            continue
-                        ax.scatter(value, ref, label=mlip)
+            traces = []
 
-                    lims = [
-                        np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
-                        np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
-                    ]
+            for mlip, value in results.items():
+                if mlip == "ref":
+                    continue
+                traces.append(
+                    go.Scatter(
+                        x=value,
+                        y=ref,
+                        name=mlip,
+                        mode="markers",
+                    )
+                )
 
-                    ax.plot(lims, lims, "k-", alpha=0.75)
-                    ax.set_aspect("equal")
-                    ax.set_xlim(lims)
-                    ax.set_ylim(lims)
-
-                    fig.savefig("scatter.svg")
-                    # fig.show()
-
-                case "plotly":
+            if not plot_combined:
+                for trace in traces:
                     fig = go.Figure()
-
-                    ref = results["ref"]
-
-                    for mlip, value in results.items():
-                        if mlip == "ref":
-                            continue
-                        fig.add_trace(
-                            go.Scatter(
-                                x=value,
-                                y=ref,
-                                name=mlip,
-                                mode="markers",
-                            )
-                        )
+                    fig.add_trace(trace)
 
                     full_fig = fig.full_figure_for_development()
                     x_range = full_fig.layout.xaxis.range
@@ -118,10 +98,33 @@ def plot_scatter(plot_type: Literal["matplotlib", "plotly"] = "matplotlib") -> C
                     )
 
                     fig.update_traces()
-                    fig.write_json("scatter.json")
+                    fig.write_json(f"scatter_{trace.name}.json")
+            else:
+                fig = go.Figure()
 
-                case _:
-                    raise NotImplementedError("Plot type not available.")
+                for trace in traces:
+                    fig.add_trace(trace)
+
+                full_fig = fig.full_figure_for_development()
+                x_range = full_fig.layout.xaxis.range
+                y_range = full_fig.layout.yaxis.range
+
+                lims = [
+                    np.min([x_range, y_range]),  # min of both axes
+                    np.max([x_range, y_range]),  # max of both axes
+                ]
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=lims,
+                        y=lims,
+                        mode="lines",
+                        showlegend=False,
+                    )
+                )
+
+                fig.update_traces()
+                fig.write_json("scatter_combined.json")
 
             return results
 
@@ -130,16 +133,12 @@ def plot_scatter(plot_type: Literal["matplotlib", "plotly"] = "matplotlib") -> C
     return plot_scatter_decorator
 
 
-def plot_bar(
-    plot_type: Literal["plotly"] = "plotly", labels: Sequence | None = None
-) -> Callable:
+def plot_bar(labels: Sequence | None = None) -> Callable:
     """
     Plot bar chart of MLIP results against reference data.
 
     Parameters
     ----------
-    plot_type
-        Type of plot to create and save.
     labels
         Labels for bars.
 
@@ -185,34 +184,29 @@ def plot_bar(
             results = func(*args, **kwargs)
             ref = results["ref"]
 
-            match plot_type:
-                case "plotly":
-                    fig = go.Figure()
+            fig = go.Figure()
 
-                    fig.add_trace(
-                        go.Bar(
-                            x=labels,
-                            y=ref,
-                            name="Reference",
-                        )
+            fig.add_trace(
+                go.Bar(
+                    x=labels,
+                    y=ref,
+                    name="Reference",
+                )
+            )
+
+            for mlip, value in results.items():
+                if mlip == "ref":
+                    continue
+                fig.add_trace(
+                    go.Bar(
+                        x=labels,
+                        y=value,
+                        name=mlip,
                     )
+                )
 
-                    for mlip, value in results.items():
-                        if mlip == "ref":
-                            continue
-                        fig.add_trace(
-                            go.Bar(
-                                x=labels,
-                                y=value,
-                                name=mlip,
-                            )
-                        )
-
-                    fig.update_traces()
-                    fig.write_json("bar.json")
-
-                case _:
-                    raise NotImplementedError("Plot type not available.")
+            fig.update_traces()
+            fig.write_json("bar.json")
 
             return results
 

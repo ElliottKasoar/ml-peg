@@ -8,12 +8,11 @@ from ase.io import read
 import numpy as np
 import pytest
 
-from mlip_testing.analysis.fixtures import plot_scatter
+from mlip_testing.tests.config import MLIPS
+from mlip_testing.tests.utils.fixtures import plot_scatter
 
 OUT_PATH = Path(__file__).parent.parent / "calcs" / "outputs" / "bcc_metals"
 ELEMENTS = ("W", "Mo", "Nb")
-
-MLIPS = ("medium", "medium-mpa-0", "medium-omat-0")
 
 
 def get_lattice_consts():
