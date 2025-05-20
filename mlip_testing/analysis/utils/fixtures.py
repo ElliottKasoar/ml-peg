@@ -213,3 +213,85 @@ def plot_bar(labels: Sequence | None = None) -> Callable:
         return plot_bar_wrapper
 
     return plot_bar_decorator
+
+
+def build_table(labels: Sequence | None = None) -> Callable:
+    """
+    Build table MLIP results.
+
+    Parameters
+    ----------
+    labels
+        Labels for bars.
+
+    Returns
+    -------
+    Callable
+        Decorator to wrap function.
+    """
+    print(labels)
+
+    def plot_bar_decorator(func: Callable) -> Callable:
+        """
+        Decorate function to plot bar chart.
+
+        Parameters
+        ----------
+        func
+            Function being wrapped.
+
+        Returns
+        -------
+        Callable
+            Wrapped function.
+        """
+
+        @functools.wraps(func)
+        def plot_bar_wrapper(*args, **kwargs) -> dict[str, Any]:
+            """
+            Wrap function to plot bar chart.
+
+            Parameters
+            ----------
+            *args
+                Arguments to pass to the function being wrapped.
+            **kwargs
+                Key word arguments to pass to the function being wrapped.
+
+            Returns
+            -------
+            dict
+                Results dictionary.
+            """
+            results = func(*args, **kwargs)
+            ref = results["ref"]
+
+            fig = go.Figure()
+
+            fig.add_trace(
+                go.Bar(
+                    x=labels,
+                    y=ref,
+                    name="Reference",
+                )
+            )
+
+            for mlip, value in results.items():
+                if mlip == "ref":
+                    continue
+                fig.add_trace(
+                    go.Bar(
+                        x=labels,
+                        y=value,
+                        name=mlip,
+                    )
+                )
+
+            fig.update_traces()
+            fig.write_json("bar.json")
+
+            return results
+
+        return plot_bar_wrapper
+
+    return plot_bar_decorator

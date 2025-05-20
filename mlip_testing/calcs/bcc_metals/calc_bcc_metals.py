@@ -11,7 +11,7 @@ from janus_core.calculations.single_point import SinglePoint
 import numpy as np
 import pytest
 
-from mlip_testing.tests.config import MLIPS
+from mlip_testing.calcs.config import MLIPS
 
 DATA_PATH = Path(__file__).parent / "data" / "bcc_metals"
 OUT_PATH = Path(__file__).parent / "outputs" / "bcc_metals"

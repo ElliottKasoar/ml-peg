@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mlip_testing.tests.config import MLIPS
+from mlip_testing.calcs.config import MLIPS
 
 
 @pytest.mark.slow
