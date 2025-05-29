@@ -1,0 +1,36 @@
+arch: mace_mp
+calc_kwargs:
+  dispersion: True
+  skin: 2.0
+  check: True
+  delay: 1
+  every: 1
+device: cpu
+ensemble: npt
+barostat_time: 1000.0
+bulk_modulus: 100.0
+thermostat_time: 100.0
+
+minimize: false
+minimize_kwargs:
+   filter_kwargs:
+        hydrostatic_strain: True
+
+pressure: 0.0
+ensemble_kwargs:
+  mask: [[1,0,0],[0,1,0],[0,0,1]]
+
+remove_rot: true
+rescale_velocities: true
+restart: false
+restart_every: 1000
+restarts_to_keep: 4
+rotate_restart: true
+stats_every: 1000
+equil_steps: 0
+tracker: False
+
+steps: 10000
+timestep: 1.0
+traj_every: 1000
+traj_start: 0

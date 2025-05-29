@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dash import html, dash_table
+import dash_bootstrap_components as dbc
 import functools
 from typing import Any
 
+from json import dump
 import numpy as np
 import plotly.graph_objects as go
 
 
-def plot_scatter(plot_combined: bool = True) -> Callable:
+def plot_parity(plot_combined: bool = True) -> Callable:
     """
-    Plot scatter plot of MLIP results against reference data.
+    Plot parity plot of MLIP results against reference data.
 
     Parameters
     ----------
@@ -25,9 +28,9 @@ def plot_scatter(plot_combined: bool = True) -> Callable:
         Decorator to wrap function.
     """
 
-    def plot_scatter_decorator(func: Callable) -> Callable:
+    def plot_parity_decorator(func: Callable) -> Callable:
         """
-        Decorate function to plot scatter.
+        Decorate function to plot parity.
 
         Parameters
         ----------
@@ -41,9 +44,9 @@ def plot_scatter(plot_combined: bool = True) -> Callable:
         """
 
         @functools.wraps(func)
-        def plot_scatter_wrapper(*args, **kwargs) -> dict[str, Any]:
+        def plot_parity_wrapper(*args, **kwargs) -> dict[str, Any]:
             """
-            Wrap function to plot scatter.
+            Wrap function to plot parity.
 
             Parameters
             ----------
@@ -98,10 +101,141 @@ def plot_scatter(plot_combined: bool = True) -> Callable:
                     )
 
                     fig.update_traces()
+                    fig.write_json(f"parity_{trace.name}.json")
+            else:
+                fig = go.Figure()
+
+                for trace in traces:
+                    fig.add_trace(trace)
+
+                full_fig = fig.full_figure_for_development()
+                x_range = full_fig.layout.xaxis.range
+                y_range = full_fig.layout.yaxis.range
+
+                lims = [
+                    np.min([x_range, y_range]),  # min of both axes
+                    np.max([x_range, y_range]),  # max of both axes
+                ]
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=lims,
+                        y=lims,
+                        mode="lines",
+                        showlegend=False,
+                    )
+                )
+
+                fig.update_traces()
+                fig.write_json("parity_combined.json")
+
+            return results
+
+        return plot_parity_wrapper
+
+    return plot_parity_decorator
+
+
+def plot_scatter(plot_combined: bool = True) -> Callable:
+    """
+    Plot scatter plot of MLIP results against reference data.
+
+    Parameters
+    ----------
+    plot_combined
+        Whether to plot all MLIPs on same graph.
+
+    Returns
+    -------
+    Callable
+        Decorator to wrap function.
+    """
+
+    def plot_scatter_decorator(func: Callable) -> Callable:
+        """
+        Decorate function to plot scatter.
+
+        Parameters
+        ----------
+        func
+            Function being wrapped.
+
+        Returns
+        -------
+        Callable
+            Wrapped function.
+        """
+
+        @functools.wraps(func)
+        def plot_scatter_wrapper(*args, **kwargs) -> dict[str, Any]:
+            """
+            Wrap function to plot scatter.
+
+            Parameters
+            ----------
+            *args
+                Arguments to pass to the function being wrapped.
+            **kwargs
+                Key word arguments to pass to the function being wrapped.
+
+            Returns
+            -------
+            dict
+                Results dictionary.
+            """
+            results = func(*args, **kwargs)
+            ref = results["ref"]
+            ref_trace = go.Scatter(
+                x=ref[0],
+                y=ref[1],
+                name="Reference",
+                mode="markers",
+            )
+
+            traces = []
+
+            for mlip, value in results.items():
+                if mlip == "ref":
+                    continue
+                traces.append(
+                    go.Scatter(
+                        x=value[0],
+                        y=value[1],
+                        name=mlip,
+                        mode="markers",
+                    )
+                )
+
+            if not plot_combined:
+                for trace in traces:
+                    fig = go.Figure()
+                    fig.add_trace(ref_trace)
+                    fig.add_trace(trace)
+
+                    full_fig = fig.full_figure_for_development()
+                    x_range = full_fig.layout.xaxis.range
+                    y_range = full_fig.layout.yaxis.range
+
+                    lims = [
+                        np.min([x_range, y_range]),  # min of both axes
+                        np.max([x_range, y_range]),  # max of both axes
+                    ]
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=lims,
+                            y=lims,
+                            mode="lines",
+                            showlegend=False,
+                        )
+                    )
+
+                    fig.update_traces()
                     fig.write_json(f"scatter_{trace.name}.json")
             else:
                 fig = go.Figure()
 
+                fig.add_trace(ref_trace)
                 for trace in traces:
                     fig.add_trace(trace)
 
@@ -133,7 +267,7 @@ def plot_scatter(plot_combined: bool = True) -> Callable:
     return plot_scatter_decorator
 
 
-def plot_bar(labels: Sequence | None = None) -> Callable:
+def plot_bar(labels: Sequence | None = None, filename: str = "bar.json") -> Callable:
     """
     Plot bar chart of MLIP results against reference data.
 
@@ -147,7 +281,6 @@ def plot_bar(labels: Sequence | None = None) -> Callable:
     Callable
         Decorator to wrap function.
     """
-    print(labels)
 
     def plot_bar_decorator(func: Callable) -> Callable:
         """
@@ -206,7 +339,7 @@ def plot_bar(labels: Sequence | None = None) -> Callable:
                 )
 
             fig.update_traces()
-            fig.write_json("bar.json")
+            fig.write_json(filename)
 
             return results
 
@@ -215,7 +348,12 @@ def plot_bar(labels: Sequence | None = None) -> Callable:
     return plot_bar_decorator
 
 
-def build_table(labels: Sequence | None = None) -> Callable:
+def build_table(
+    title: str | None = None,
+    subtitle: str | None = None,
+    headings: Sequence | None = None,
+    filename: str = "table.json",
+) -> Callable:
     """
     Build table MLIP results.
 
@@ -229,9 +367,8 @@ def build_table(labels: Sequence | None = None) -> Callable:
     Callable
         Decorator to wrap function.
     """
-    print(labels)
 
-    def plot_bar_decorator(func: Callable) -> Callable:
+    def build_table_decorator(func: Callable) -> Callable:
         """
         Decorate function to plot bar chart.
 
@@ -247,7 +384,7 @@ def build_table(labels: Sequence | None = None) -> Callable:
         """
 
         @functools.wraps(func)
-        def plot_bar_wrapper(*args, **kwargs) -> dict[str, Any]:
+        def build_table_wrapper(*args, **kwargs) -> dict[str, Any]:
             """
             Wrap function to plot bar chart.
 
@@ -264,34 +401,35 @@ def build_table(labels: Sequence | None = None) -> Callable:
                 Results dictionary.
             """
             results = func(*args, **kwargs)
-            ref = results["ref"]
+            # Form of results is
+            # results = {
+            #     metric_1: {mlip_1: value_1, mlip_2: value_2},
+            #     metric_2: {mlip_1: value_3, mlip_2: value_4},
+            # }
 
-            fig = go.Figure()
+            metrics_columns = ("MLIP",) + tuple(results.keys())
+            # Use MLIP keys from first (any) metric keys
+            mlips = next(iter(results.values())).keys()
 
-            fig.add_trace(
-                go.Bar(
-                    x=labels,
-                    y=ref,
-                    name="Reference",
+            metrics_data = []
+            for mlip in mlips:
+                metrics_data.append(
+                    {"MLIP": mlip}
+                    | {key: value[mlip] for key, value in results.items()},
                 )
+
+            table = dash_table.DataTable(
+                metrics_data,
+                [{"name": i, "id": i} for i in metrics_columns],
+                id="metrics",
             )
 
-            for mlip, value in results.items():
-                if mlip == "ref":
-                    continue
-                fig.add_trace(
-                    go.Bar(
-                        x=labels,
-                        y=value,
-                        name=mlip,
-                    )
-                )
-
-            fig.update_traces()
-            fig.write_json("bar.json")
+            # Save dict of table to be loaded
+            with open(filename, "w") as fp:
+                dump({"data": table.data, "columns": table.columns}, fp)
 
             return results
 
-        return plot_bar_wrapper
+        return build_table_wrapper
 
-    return plot_bar_decorator
+    return build_table_decorator

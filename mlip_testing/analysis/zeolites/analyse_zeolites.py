@@ -1,4 +1,4 @@
-"""Helper functions for Zeolites test."""
+"""Analyse results of Zeolites tests."""
 
 from __future__ import annotations
 

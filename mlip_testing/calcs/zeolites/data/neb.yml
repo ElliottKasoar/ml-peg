@@ -1,0 +1,8 @@
+init_struct: MOR-Al-20H2O-acetone-stateA.cif
+final_struct: MOR-Al-20H2O-acetone-stateB.cif
+n_images: 42
+minimize: True
+plot_band: True
+write_band: True
+calc_kwargs:
+  dispersion: True
