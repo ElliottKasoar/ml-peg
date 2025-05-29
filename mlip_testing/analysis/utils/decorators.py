@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from dash import html, dash_table
-import dash_bootstrap_components as dbc
 import functools
+from json import dump
 from typing import Any
 
-from json import dump
+from dash import dash_table
 import numpy as np
 import plotly.graph_objects as go
 
@@ -275,6 +274,8 @@ def plot_bar(labels: Sequence | None = None, filename: str = "bar.json") -> Call
     ----------
     labels
         Labels for bars.
+    filename
+        Filename to save table.
 
     Returns
     -------
@@ -349,9 +350,6 @@ def plot_bar(labels: Sequence | None = None, filename: str = "bar.json") -> Call
 
 
 def build_table(
-    title: str | None = None,
-    subtitle: str | None = None,
-    headings: Sequence | None = None,
     filename: str = "table.json",
 ) -> Callable:
     """
@@ -359,8 +357,8 @@ def build_table(
 
     Parameters
     ----------
-    labels
-        Labels for bars.
+    filename
+        Filename to save table.
 
     Returns
     -------
