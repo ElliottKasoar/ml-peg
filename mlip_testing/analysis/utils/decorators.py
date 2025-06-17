@@ -137,7 +137,7 @@ def plot_parity(plot_combined: bool = True) -> Callable:
 
 def plot_scatter(plot_combined: bool = True) -> Callable:
     """
-    Plot scatter plot of MLIP results against reference data.
+    Plot scatter plot of MLIP results and reference data.
 
     Parameters
     ----------
@@ -211,24 +211,6 @@ def plot_scatter(plot_combined: bool = True) -> Callable:
                     fig.add_trace(ref_trace)
                     fig.add_trace(trace)
 
-                    full_fig = fig.full_figure_for_development()
-                    x_range = full_fig.layout.xaxis.range
-                    y_range = full_fig.layout.yaxis.range
-
-                    lims = [
-                        np.min([x_range, y_range]),  # min of both axes
-                        np.max([x_range, y_range]),  # max of both axes
-                    ]
-
-                    fig.add_trace(
-                        go.Scatter(
-                            x=lims,
-                            y=lims,
-                            mode="lines",
-                            showlegend=False,
-                        )
-                    )
-
                     fig.update_traces()
                     fig.write_json(f"scatter_{trace.name}.json")
             else:
@@ -237,24 +219,6 @@ def plot_scatter(plot_combined: bool = True) -> Callable:
                 fig.add_trace(ref_trace)
                 for trace in traces:
                     fig.add_trace(trace)
-
-                full_fig = fig.full_figure_for_development()
-                x_range = full_fig.layout.xaxis.range
-                y_range = full_fig.layout.yaxis.range
-
-                lims = [
-                    np.min([x_range, y_range]),  # min of both axes
-                    np.max([x_range, y_range]),  # max of both axes
-                ]
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=lims,
-                        y=lims,
-                        mode="lines",
-                        showlegend=False,
-                    )
-                )
 
                 fig.update_traces()
                 fig.write_json("scatter_combined.json")
