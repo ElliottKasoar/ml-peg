@@ -21,6 +21,7 @@
 *.svg
 *.xz
 *.txt
+*.json
 ~*
 *~
 .project
