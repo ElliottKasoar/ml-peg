@@ -21,6 +21,7 @@ readme = "README.md"
 
 dependencies = [
     "janus-core<1.0.0,>=0.8.2",
+    "kaleido",
     "plotly>=6.0.1",
     "dash>=3.0.2",
     "dash_bootstrap_components",
@@ -175,6 +176,9 @@ default-groups = [
     "docs",
     "pre-commit",
 ]
+<<<<<<< HEAD
 
 [tool.uv.build-backend]
 module-root = ""
+=======
+>>>>>>> 924031d (Simplify dependencies)
