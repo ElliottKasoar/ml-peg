@@ -13,13 +13,7 @@ import pytest
 
 from mlip_testing.calcs.config import MLIPS
 
-DATA_PATH = Path(__file__).parent / "data" / "bcc_metals"
-OUT_PATH = Path(__file__).parent / "outputs" / "bcc_metals"
-
-# @pytest.fixture(scope="session")
-# def mlips():
-#     """MLIPs to run calculations for."""
-#     return ("medium", "medium-mpa-0", "medium-omat-0")
+OUT_PATH = Path(__file__).parent / "outputs"
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +30,7 @@ def relax_structs(structs):
     for struct in structs:
         for mlip in MLIPS:
             geomopt = GeomOpt(
-                struct=struct,
+                struct=struct.copy(),
                 arch="mace_mp",
                 model_path=mlip,
                 write_results=True,
@@ -60,7 +54,7 @@ def test_eos(structs, relax_structs, mlip):
     """Run calculations required for energy-volume curves."""
     for struct in structs:
         eos = EoS(
-            struct=relax_structs[f"{struct.get_chemical_formula()}-{mlip}"],
+            struct=relax_structs[f"{struct.get_chemical_formula()}-{mlip}"].copy(),
             arch="mace_mp",
             model_path=mlip,
             minimize=True,
@@ -79,11 +73,12 @@ def test_vacancy(structs, relax_structs, mlip):
     """Run calculations required to get vacancy energies."""
     for struct in structs:
         struct_supercell = make_supercell(
-            relax_structs[f"{struct.get_chemical_formula()}-{mlip}"], np.eye(3) * 5
+            relax_structs[f"{struct.get_chemical_formula()}-{mlip}"].copy(),
+            np.eye(3) * 5,
         )
 
         single_point = SinglePoint(
-            struct=struct_supercell,
+            struct=struct_supercell.copy(),
             arch="mace_mp",
             model_path=mlip,
             write_results=True,
@@ -93,7 +88,7 @@ def test_vacancy(structs, relax_structs, mlip):
 
         del struct_supercell[0]
         geomopt = GeomOpt(
-            struct=struct_supercell,
+            struct=struct_supercell.copy(),
             fmax=1e-5,
             filter_func=None,
             arch="mace_mp",
