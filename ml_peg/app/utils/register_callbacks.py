@@ -442,13 +442,11 @@ def register_weight_callbacks(
     @callback(
         Output(f"{table_id}-weight-store", "data", allow_duplicate=True),
         Input(f"{input_id}-input", "value"),
-        Input(f"{table_id}-reset-button", "n_clicks"),
         State(f"{table_id}-weight-store", "data"),
         prevent_initial_call=True,
     )
     def store_input_value(
         input_weight: float | None,
-        n_clicks: int,
         stored_weights: dict[str, float],
     ) -> dict[str, float]:
         """
@@ -458,8 +456,6 @@ def register_weight_callbacks(
         ----------
         input_weight
             Weight value from input box.
-        n_clicks
-            Number of clicks. Variable unused, but Input is required to reset weights.
         stored_weights
             Stored weights dictionary.
 
@@ -468,43 +464,42 @@ def register_weight_callbacks(
         dict[str, float]
             Stored weights for each input box.
         """
-        trigger_id = ctx.triggered_id
-
-        if trigger_id == f"{input_id}-input":
-            if input_weight is None:
-                raise PreventUpdate
-            stored_weights[column] = input_weight
-        elif trigger_id == f"{table_id}-reset-button":
-            stored_weights.update(
-                (key, default_weights.get(key, 1.0)) for key in stored_weights
-            )
-        else:
+        if input_weight is None:
             raise PreventUpdate
+        stored_weights[column] = input_weight
 
         return stored_weights
 
     @callback(
         Output(f"{input_id}-input", "value"),
-        Input(f"{table_id}-weight-store", "data"),
         Input("all-tabs", "value"),
+        Input(f"{table_id}-reset-button", "n_clicks"),
+        State(f"{table_id}-weight-store", "data"),
         prevent_initial_call="initial_duplicate",
     )
-    def sync_inputs(stored_weights: dict[str, float], tabs_value: str) -> float:
+    def sync_inputs(
+        tabs_value: str, n_clicks: int, stored_weights: dict[str, float]
+    ) -> float:
         """
         Sync weight values between the text input and Store.
 
         Parameters
         ----------
-        stored_weights
-            Stored weight values for each column.
         tabs_value
             Tab name. Variable unused, but required as input to trigger on tab change.
+        n_clicks
+            Number of clicks. Variable unused, but Input is required to reset weights.
+        stored_weights
+            Stored weight values for each column.
 
         Returns
         -------
         float
             Weight to set text input value.
         """
+        trigger_id = ctx.triggered_id
+        if trigger_id == f"{table_id}-reset-button":
+            return default_weights.get(column, 1.0)
         return stored_weights[column]
 
 
