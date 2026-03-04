@@ -210,3 +210,8 @@ pet-mad:
 #   level_of_theory: ωB97M-V
 #   kwargs:
 #     model: "polar-1-l"
+
+lennard-jones:
+  module: ase.calculators.lj
+  class_name: LennardJones
+  trained_on_d3: false
