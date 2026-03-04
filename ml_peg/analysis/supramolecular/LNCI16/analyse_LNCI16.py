@@ -4,19 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 import shutil
-from typing import Any
 
+from ase.data import chemical_symbols
 from ase.io import read
+import numpy as np
 import pytest
 
 from ml_peg.analysis.utils.decorators import build_table, plot_parity
-from ml_peg.analysis.utils.element_filters import (
-    build_element_set_masks,
-    filter_hoverdata_dict,
-    filter_results_dict,
-    load_element_sets,
-    write_element_sets_summary_file,
-)
 from ml_peg.analysis.utils.utils import load_metrics_config, mae
 from ml_peg.app import APP_ROOT
 from ml_peg.calcs import CALCS_ROOT
@@ -31,77 +25,49 @@ METRICS_CONFIG_PATH = Path(__file__).with_name("metrics.yml")
 DEFAULT_THRESHOLDS, DEFAULT_TOOLTIPS, DEFAULT_WEIGHTS = load_metrics_config(
     METRICS_CONFIG_PATH
 )
-ELEMENT_SETS_CONFIG_PATH = Path(__file__).parents[2] / "element_sets.yml"
-ELEMENT_SETS = load_element_sets(ELEMENT_SETS_CONFIG_PATH)
 
 
-def get_structure_info() -> list[dict[str, Any]]:
+def get_info() -> dict[str, list[str]]:
     """
     Get structure information for LNCI16 systems.
 
-    This reads structures from the first model folder that contains data.
-    The returned list is used as the single ordering for hover labels,
-    filtering, and saved structure-index mapping.
-
-    Returns
-    -------
-    list[dict[str, Any]]
-        One dictionary per structure with keys:
-        ``system``, ``atom_count``, ``charge``, ``is_charged``,
-        ``elements``, and ``index``.
+    dict[str, list[str]]
+        Dictationary of info returned from first non-empty model directory.
     """
+    info = {
+        "systems": [],
+        "charges": [],
+        "atoms_counts": [],
+        "is_charged": [],
+        "filters": [],
+    }
+
     for model_name in MODELS:
         model_dir = CALC_PATH / model_name
         if model_dir.exists():
             xyz_files = sorted(model_dir.glob("*.xyz"))
             if xyz_files:
-                structure_metadata: list[dict[str, Any]] = []
-                for index, xyz_file in enumerate(xyz_files):
+                element_filter = np.zeros(
+                    (len(xyz_files), len(chemical_symbols)), dtype=bool
+                )
+
+                for xyz_file in xyz_files:
                     atoms = read(xyz_file)
-                    charge = int(atoms.info.get("complex_charge", 0))
-                    structure_metadata.append(
-                        {
-                            "system": atoms.info.get(
-                                "system", f"system_{xyz_file.stem}"
-                            ),
-                            "atom_count": len(atoms),
-                            "charge": charge,
-                            "is_charged": charge != 0,
-                            "elements": sorted(set(atoms.get_chemical_symbols())),
-                            "index": index,
-                        }
+                    info["systems"].append(
+                        atoms.info.get("system", f"system_{xyz_file.stem}")
                     )
-                return structure_metadata
-    return []
+                    info["atoms_counts"].append(len(atoms))
+
+                    charge = atoms.info.get("complex_charge", 0)
+                    info["charges"].append(charge)
+                    info["is_charged"].append(charge != 0)
+
+                    elements = set(atoms.get_chemical_symbols())
+                return info
+    return info
 
 
-def build_hoverdata_from_structure_info(
-    structure_info: list[dict[str, Any]],
-) -> dict[str, list]:
-    """
-    Build hover labels for the predicted-vs-reference scatter plot.
-
-    Parameters
-    ----------
-    structure_info
-        Structure information returned by :func:`get_structure_info`.
-
-    Returns
-    -------
-    dict[str, list]
-        Hover label columns mapped to values in structure order.
-    """
-    return {
-        "System": [entry["system"] for entry in structure_info],
-        "Elements": ["".join(entry["elements"]) for entry in structure_info],
-        "Complex Atoms": [entry["atom_count"] for entry in structure_info],
-        "Charge": [entry["charge"] for entry in structure_info],
-        "Charged": [entry["is_charged"] for entry in structure_info],
-    }
-
-
-STRUCTURE_INFO = get_structure_info()
-HOVERDATA = build_hoverdata_from_structure_info(STRUCTURE_INFO)
+INFO = get_info()
 
 
 def compute_lnci16_mae(energies: dict[str, list]) -> dict[str, float | None]:
@@ -129,74 +95,21 @@ def compute_lnci16_mae(energies: dict[str, list]) -> dict[str, float | None]:
     return results
 
 
-def write_lnci16_element_set_outputs(interaction_energies: dict[str, list]) -> None:
-    """
-    Write filtered LNCI16 outputs for every configured element set.
-
-    For each element set (for example ``all`` and ``hcno``), this writes:
-    1. A filtered predicted-vs-reference scatter plot JSON.
-    2. A filtered metrics table JSON.
-    3. A  ``element_sets.json`` file with counts and original
-       structure positions.
-
-    Parameters
-    ----------
-    interaction_energies
-        Full LNCI16 interaction energies before filtering.
-    """
-    structure_elements = [set(entry["elements"]) for entry in STRUCTURE_INFO]
-    element_set_masks = build_element_set_masks(structure_elements, ELEMENT_SETS)
-
-    for element_set_key, element_set_mask in element_set_masks.items():
-        filtered_results = filter_results_dict(interaction_energies, element_set_mask)
-        filtered_hoverdata = filter_hoverdata_dict(HOVERDATA, element_set_mask)
-        filtered_mae = compute_lnci16_mae(filtered_results)
-        element_set_out_path = OUT_PATH / "element_sets" / element_set_key
-
-        @plot_parity(
-            filename=element_set_out_path / "figure_interaction_energies.json",
-            title="LNCI16 Interaction Energies",
-            x_label="Predicted interaction energy / kcal/mol",
-            y_label="Reference interaction energy / kcal/mol",
-            hoverdata=filtered_hoverdata,
-        )
-        def _filtered_interaction_energies(
-            results: dict[str, list] = filtered_results,
-        ) -> dict[str, list]:
-            return results
-
-        _filtered_interaction_energies()
-
-        @build_table(
-            filename=element_set_out_path / "lnci16_metrics_table.json",
-            metric_tooltips=DEFAULT_TOOLTIPS,
-            thresholds=DEFAULT_THRESHOLDS,
-            weights=DEFAULT_WEIGHTS,
-        )
-        def _filtered_metrics(
-            mae_by_model: dict[str, float | None] = filtered_mae,
-        ) -> dict[str, dict]:
-            return {"MAE": mae_by_model}
-
-        _filtered_metrics()
-
-    write_element_sets_summary_file(OUT_PATH, ELEMENT_SETS, element_set_masks)
-
-
 @pytest.fixture
 @plot_parity(
     filename=OUT_PATH / "figure_interaction_energies.json",
     title="LNCI16 Interaction Energies",
     x_label="Predicted interaction energy / kcal/mol",
     y_label="Reference interaction energy / kcal/mol",
-    hoverdata=HOVERDATA,
+    hoverdata={
+        "System": INFO["systems"],
+        "Complex Atoms": INFO["atoms_counts"],
+        "Charge": INFO["charges"],
+    },
 )
 def interaction_energies() -> dict[str, list]:
     """
     Get interaction energies for all LNCI16 systems.
-
-    This fixture also copies structure files for the app and writes
-    element-set specific outputs used by the element-set selector.
 
     Returns
     -------
@@ -241,7 +154,6 @@ def interaction_energies() -> dict[str, list]:
         for i, xyz_file in enumerate(xyz_files):
             shutil.copy(xyz_file, structs_dir / f"{i}.xyz")
 
-    write_lnci16_element_set_outputs(interaction_energy_results)
     return interaction_energy_results
 
 
