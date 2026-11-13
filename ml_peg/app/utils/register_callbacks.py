@@ -1029,7 +1029,9 @@ def register_weight_callbacks(
         float
             Weight to set as the text input value.
         """
-        return stored_weights[column]
+        # The store may not yet hold this column, so fall back as update_weights
+        # does rather than raising, which would 500 the callback
+        return (stored_weights or {}).get(column, default_weights.get(column, 1.0))
 
 
 def register_normalization_callbacks(
